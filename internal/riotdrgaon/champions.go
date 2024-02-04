@@ -7,17 +7,20 @@ import (
 	"net/http"
 )
 
-func (r *RiotDragon) GetChampion(versionId string, championId string) (*Champion, error) {
+func (r *RiotDragon) GetChampion(versionId string, championId ...string) ([]*Champion, error) {
 	version, err := r.GetVersion(versionId)
 	if err != nil {
 		return nil, err
 	}
 
-	if champion, ok := version.Champions[championId]; ok {
-		return champion, nil
+	champions := make([]*Champion, 0)
+	for _, id := range championId {
+		if champion, ok := version.Champions[id]; ok {
+			champions = append(champions, champion)
+		}
 	}
 
-	return nil, errors.New("Champion not found")
+	return champions, errors.New("Champion not found")
 }
 
 func (r *RiotDragon) GetChampions(versionId string) (map[string]*Champion, error) {

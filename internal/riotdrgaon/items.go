@@ -87,6 +87,14 @@ func (r *RiotDragon) GetItemsFromRiot(version string) (map[string]*Item, error) 
 					Tags: make([]string, 0),
 				}
 
+				if value, ok := itemMap["stats"].(map[string]interface{}); ok {
+					for k, v := range value {
+						if stat, ok := v.(float64); ok {
+							item.Stats[k] = int(stat)
+						}
+					}
+				}
+
 				if value, ok := itemMap["into"].([]interface{}); ok {
 					for _, v := range value {
 						if v == nil {

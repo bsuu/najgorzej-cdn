@@ -265,16 +265,22 @@ type Version struct {
 	Summoners map[string]*Summoner `json:"summoners"`
 }
 
-func (v *Version) GetItem(id string) (*Item, error) {
-	if item, ok := v.Items[id]; ok {
-		return item, nil
+func (v *Version) GetItem(ids ...string) map[string]*Item {
+	items := make(map[string]*Item, 0)
+	for _, id := range ids {
+		if item, ok := v.Items[id]; ok {
+			items[id] = item
+		}
 	}
-	return nil, errors.New("item not found")
+	return items
 }
 
-func (v *Version) GetChampion(id string) (*Champion, error) {
-	if champion, ok := v.Champions[id]; ok {
-		return champion, nil
+func (v *Version) GetChampion(ids ...string) map[string]*Champion {
+	champions := make(map[string]*Champion, 0)
+	for _, id := range ids {
+		if champion, ok := v.Champions[id]; ok {
+			champions[id] = champion
+		}
 	}
-	return nil, errors.New("champion not found")
+	return champions
 }
