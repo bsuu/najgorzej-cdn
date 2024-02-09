@@ -24,6 +24,7 @@ func main() {
 		Path:     *path,
 		Cache:    *cacheSize,
 	})
+
 	err := riotDragon.ScanLocalVersions()
 
 	if err == nil {
@@ -61,6 +62,10 @@ func main() {
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendStatus(418)
 	})
+
+	// Static files
+
+	cdn.Static("/images", "./images")
 
 	app.Listen(":8080")
 }

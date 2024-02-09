@@ -27,6 +27,11 @@ func (r *RiotDragon) DownloadVersion(version string) (*Version, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("\r[%s] Status: Downloading runes             ", version)
+	runes, err := r.GetRunesFromRiot(version)
+	if err != nil {
+		return nil, err
+	}
 	fmt.Printf("\r[%s] Status: Saving to local files        ", version)
 
 	v := &Version{
@@ -34,6 +39,7 @@ func (r *RiotDragon) DownloadVersion(version string) (*Version, error) {
 		Items:     items,
 		Champions: champions,
 		Summoners: summoners,
+		Runes:     runes,
 	}
 
 	r.SaveLocalVersions(v)
@@ -259,10 +265,11 @@ type RiotDragon struct {
 }
 
 type Version struct {
-	Id        string               `json:"id"`
-	Items     map[string]*Item     `json:"items"`
-	Champions map[string]*Champion `json:"champions"`
-	Summoners map[string]*Summoner `json:"summoners"`
+	Id        string                   `json:"id"`
+	Items     map[string]*Item         `json:"items"`
+	Champions map[string]*Champion     `json:"champions"`
+	Summoners map[string]*Summoner     `json:"summoners"`
+	Runes     map[string]*RuneReforged `json:"runes"`
 }
 
 func (v *Version) GetItem(ids ...string) map[string]*Item {
