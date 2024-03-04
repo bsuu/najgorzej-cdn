@@ -1,11 +1,64 @@
 package riot_model
 
+type RiotItem struct {
+	Type    string                   `json:"type"`
+	Version string                   `json:"version"`
+	Data    map[string]*RiotItemData `json:"data"`
+}
+
+type RiotItemData struct {
+	Name        string             `json:"name"`
+	Description string             `json:"description"`
+	Plaintext   string             `json:"plaintext"`
+	Colloq      string             `json:"colloq"`
+	Into        []string           `json:"into"`
+	From        []string           `json:"from"`
+	Tags        []string           `json:"tags"`
+	Maps        map[string]bool    `json:"maps"`
+	Depth       float64            `json:"depth"`
+	Stats       map[string]float64 `json:"stats"`
+
+	Image *RiotImage        `json:"image"`
+	Gold  *RiotItemDataGold `json:"gold"`
+}
+
+type RiotItemDataGold struct {
+	Base        int  `json:"base"`
+	Total       int  `json:"total"`
+	Sell        int  `json:"sell"`
+	Purchasable bool `json:"purchasable"`
+}
+
+type RiotSummoner struct {
+	Type   string                       `json:"type"`
+	Format string                       `json:"format"`
+	Data   map[string]*RiotSummonerData `json:"data"`
+}
+
+type RiotSummonerData struct {
+	Id          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Tooltip     string `json:"tooltip"`
+	Maxrank     int    `json:"maxrank"`
+
+	Cooldown     []float64   `json:"cooldown"`
+	CooldownBurn string      `json:"cooldownBurn"`
+	Cost         []float64   `json:"cost"`
+	CostBurn     string      `json:"costBurn"`
+	Effect       [][]float64 `json:"effect"`
+	EffectBurn   []string    `json:"effectBurn"`
+
+	Key           string `json:"key"`
+	Summonerlevel int    `json:"summonerLevel"`
+}
+
 type RiotChampionFull struct {
 	Type    string                   `json:"type"`
 	Format  string                   `json:"format"`
 	Version string                   `json:"version"`
 	Data    map[string]*RiotChampion `json:"data"`
-	Keys    []string                 `json:"keys"`
+	Keys    map[int]string           `json:"keys"`
 }
 
 type RiotChampion struct {
@@ -69,13 +122,13 @@ type RiotChampionSpell struct {
 
 	Cooldown     []float64 `json:"cooldown"`
 	CooldownBurn string    `json:"cooldownBurn"`
-	Cost         []int     `json:"cost"`
+	Cost         []float64 `json:"cost"`
 	CostBurn     string    `json:"costBurn"`
-	Range        []int     `json:"range"`
+	Range        []float64 `json:"range"`
 	RangeBurn    string    `json:"rangeBurn"`
 
-	Effect     [][]int  `json:"effect"`
-	EffectBurn []string `json:"effectBurn"`
+	Effect     [][]float64 `json:"effect"`
+	EffectBurn []string    `json:"effectBurn"`
 
 	Image    *RiotImage    `json:"image"`
 	Leveltip *RiotLevelTip `json:"leveltip"`

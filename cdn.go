@@ -3,12 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 
 	"bsuu.eu/riot-cdn/internal/riotdrgaon"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cache"
+	"github.com/gofiber/fiber/v2/middleware/compress"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/favicon"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/fiber/v2/middleware/monitor"
+	"github.com/gofiber/fiber/v2/utils"
 )
 
 func main() {
@@ -37,11 +41,21 @@ func main() {
 
 	//Middlewares
 
-	app.Use(cache.New())
-	app.Get("/metrics", monitor.New(monitor.Config{
-		Title:      "CDN Metrics",
-		CustomHead: "🤡",
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "https://najgorzej.lol, https://api.najgorzej.lol, https://cdn.najgorzej.lol",
+		AllowOriginsFunc: func(origin string) bool {
+			return os.Getenv("ENVIRONMENT") == "development"
+		},
 	}))
+
+	// Initialize default config
+	app.Use(compress.New())
+	app.Use(cache.New(cache.Config{
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return utils.CopyString(c.Path() + c.Query("lang"))
+		},
+	}))
+	app.Use(favicon.New())
 	app.Use(logger.New())
 
 	// Routes
@@ -49,15 +63,21 @@ func main() {
 	cdn := app.Group("/cdn")
 
 	cdn.Get("/versions", riotDragon.GetVersionsHandler)
-	cdn.Get("/versions/:version", riotDragon.CacheHandler, riotDragon.GetVersionHandler)
+	cdn.Get("/versions/:version", riotDragon.LanguageHandler, riotDragon.CacheHandler, riotDragon.GetVersionHandler)
 
 	cdn.Get("/languages", riotDragon.GetLanguagesHandler)
 
-	cdn.Get("/champions/:version", riotDragon.CacheHandler, riotDragon.GetChampionsHandler)
-	cdn.Get("/champions/:version/:champion", riotDragon.CacheHandler, riotDragon.GetChampionHandler)
+	cdn.Get("/champions/:version", riotDragon.LanguageHandler, riotDragon.CacheHandler, riotDragon.GetChampionsHandler)
+	cdn.Get("/champions/:version/:champion", riotDragon.LanguageHandler, riotDragon.CacheHandler, riotDragon.GetChampionHandler)
 
-	cdn.Get("/items/:version", riotDragon.CacheHandler, riotDragon.GetItemsHandler)
-	cdn.Get("/items/:version/:item", riotDragon.CacheHandler, riotDragon.GetItemHandler)
+	cdn.Get("/items/:version", riotDragon.LanguageHandler, riotDragon.CacheHandler, riotDragon.GetItemsHandler)
+	cdn.Get("/items/:version/:item", riotDragon.LanguageHandler, riotDragon.CacheHandler, riotDragon.GetItemHandler)
+
+	cdn.Get("/summoners/:version", riotDragon.LanguageHandler, riotDragon.CacheHandler, riotDragon.GetSummonersHandler)
+	cdn.Get("/summoners/:version/:summoner", riotDragon.LanguageHandler, riotDragon.CacheHandler, riotDragon.GetSummonerHandler)
+
+	cdn.Get("/runes/:version", riotDragon.LanguageHandler, riotDragon.CacheHandler, riotDragon.GetRunesHandler)
+	cdn.Get("/runes/:version/:rune", riotDragon.LanguageHandler, riotDragon.CacheHandler, riotDragon.GetRuneHandler)
 
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendStatus(418)

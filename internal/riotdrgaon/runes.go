@@ -87,6 +87,35 @@ func (r *RiotDragon) GetRunesFromRiot(version string) (map[string]*RuneReforged,
 	return runesReforged, nil
 }
 
+func (r *RuneReforged) ToLanguage(language string) *RuneReforged {
+	return &RuneReforged{
+		Id:   r.Id,
+		Key:  r.Key,
+		Name: map[string]string{language: r.Name[language]},
+		Slots: func() [][]*Rune {
+			slots := make([][]*Rune, 0)
+			for _, slot := range r.Slots {
+				runes := make([]*Rune, 0)
+				for _, rune := range slot {
+					runes = append(runes, rune.ToLanguage(language))
+				}
+				slots = append(slots, runes)
+			}
+			return slots
+		}(),
+	}
+}
+
+func (r *Rune) ToLanguage(language string) *Rune {
+	return &Rune{
+		Id:        r.Id,
+		Key:       r.Key,
+		Name:      map[string]string{language: r.Name[language]},
+		ShortDesc: map[string]string{language: r.ShortDesc[language]},
+		LongDesc:  map[string]string{language: r.LongDesc[language]},
+	}
+}
+
 type RuneReforged struct {
 	Id    int               `json:"id"`
 	Key   string            `json:"key"`

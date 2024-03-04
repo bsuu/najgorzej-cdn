@@ -3,8 +3,11 @@ package riotdrgaon
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+
+	riot_model "bsuu.eu/riot-cdn/internal/riotdrgaon/model"
 )
 
 func (r *RiotDragon) GetChampion(versionId string, championId ...string) ([]*Champion, error) {
@@ -51,71 +54,38 @@ func (r *RiotDragon) GetChampionsFromRiot(version string) (map[string]*Champion,
 			return nil, err
 		}
 
-		var payload map[string]interface{}
+		var payload riot_model.RiotChampionFull
 
 		err = json.Unmarshal(body, &payload)
 
 		if err != nil {
+			fmt.Println(err)
 			continue
 		}
 
-		for index, dirtyChampion := range payload["data"].(map[string]interface{}) {
-			championMap := dirtyChampion.(map[string]interface{})
+		for _, dirtyChampion := range payload.Data {
+			if champion, ok := champions[dirtyChampion.Id]; ok {
+				champion.Titles[language] = dirtyChampion.Title
+				champion.Blurbs[language] = dirtyChampion.Blurb
+				champion.Lores[language] = dirtyChampion.Lore
+				champion.Passive.Name[language] = dirtyChampion.Passive.Name
+				champion.Passive.Description[language] = dirtyChampion.Passive.Description
 
-			if champion, ok := champions[index]; ok {
-				champion.Titles[language] = championMap["title"].(string)
-				champion.Blurbs[language] = championMap["blurb"].(string)
-				champion.Lores[language] = championMap["lore"].(string)
-
-				if value, ok := championMap["passive"].(map[string]interface{}); ok {
-					champion.Passive.Name[language] = value["name"].(string)
-					champion.Passive.Description[language] = value["description"].(string)
+				for i, spell := range dirtyChampion.Spells {
+					champion.Skills[i].Names[language] = spell.Name
+					champion.Skills[i].Descriptions[language] = spell.Description
+					champion.Skills[i].Tooltips[language] = spell.Tooltip
 				}
-
-				if value, ok := championMap["spells"].([]interface{}); ok {
-					for index, skill := range value {
-						skillMap := skill.(map[string]interface{})
-						champion.Skills[index].Names[language] = skillMap["name"].(string)
-						champion.Skills[index].Tooltips[language] = skillMap["tooltip"].(string)
-						champion.Skills[index].Descriptions[language] = skillMap["description"].(string)
-					}
-				}
-
 			} else {
+
 				champion := &Champion{
-					Id:   championMap["id"].(string),
-					Key:  championMap["key"].(string),
-					Name: championMap["name"].(string),
-					Info: Info{
-						Attack:     int(championMap["info"].(map[string]interface{})["attack"].(float64)),
-						Defense:    int(championMap["info"].(map[string]interface{})["defense"].(float64)),
-						Magic:      int(championMap["info"].(map[string]interface{})["magic"].(float64)),
-						Difficulty: int(championMap["info"].(map[string]interface{})["difficulty"].(float64)),
-					},
-					Stats: Stats{
-						Hp:                   championMap["stats"].(map[string]interface{})["hp"].(float64),
-						Hpperlevel:           championMap["stats"].(map[string]interface{})["hpperlevel"].(float64),
-						Mp:                   championMap["stats"].(map[string]interface{})["mp"].(float64),
-						Mpperlevel:           championMap["stats"].(map[string]interface{})["mpperlevel"].(float64),
-						Movespeed:            championMap["stats"].(map[string]interface{})["movespeed"].(float64),
-						Armor:                championMap["stats"].(map[string]interface{})["armor"].(float64),
-						Armorperlevel:        championMap["stats"].(map[string]interface{})["armorperlevel"].(float64),
-						Spellblock:           championMap["stats"].(map[string]interface{})["spellblock"].(float64),
-						Spellblockperlevel:   championMap["stats"].(map[string]interface{})["spellblockperlevel"].(float64),
-						Attackrange:          championMap["stats"].(map[string]interface{})["attackrange"].(float64),
-						Hpregen:              championMap["stats"].(map[string]interface{})["hpregen"].(float64),
-						Hpregenperlevel:      championMap["stats"].(map[string]interface{})["hpregenperlevel"].(float64),
-						Mpregen:              championMap["stats"].(map[string]interface{})["mpregen"].(float64),
-						Mpregenperlevel:      championMap["stats"].(map[string]interface{})["mpregenperlevel"].(float64),
-						Crit:                 championMap["stats"].(map[string]interface{})["crit"].(float64),
-						Critperlevel:         championMap["stats"].(map[string]interface{})["critperlevel"].(float64),
-						Attackdamage:         championMap["stats"].(map[string]interface{})["attackdamage"].(float64),
-						Attackdamageperlevel: championMap["stats"].(map[string]interface{})["attackdamageperlevel"].(float64),
-						Attackspeedperlevel:  championMap["stats"].(map[string]interface{})["attackspeedperlevel"].(float64),
-					},
-					Titles: map[string]string{language: championMap["title"].(string)},
-					Blurbs: map[string]string{language: championMap["blurb"].(string)},
-					Lores:  map[string]string{language: championMap["lore"].(string)},
+					Id:     dirtyChampion.Id,
+					Key:    dirtyChampion.Key,
+					Name:   dirtyChampion.Name,
+					Tags:   dirtyChampion.Tags,
+					Titles: make(map[string]string),
+					Blurbs: make(map[string]string),
+					Lores:  make(map[string]string),
 					Skills: make([]*Skill, 0),
 					Passive: &Passive{
 						Name:        make(map[string]string),
@@ -123,66 +93,108 @@ func (r *RiotDragon) GetChampionsFromRiot(version string) (map[string]*Champion,
 					},
 				}
 
-				if value, ok := championMap["stats"].(map[string]interface{})["attackspeed"].(float64); ok {
-					champion.Stats.Attackspeed = value
-				}
+				for _, spell := range dirtyChampion.Spells {
 
-				if value, ok := championMap["spells"].([]interface{}); ok {
-					for _, skill := range value {
-						skillMap := skill.(map[string]interface{})
-						skill := Skill{
-							Id:           skillMap["id"].(string),
-							Cooldown:     make([]int, 0),
-							Cost:         make([]int, 0),
-							Range:        make([]int, 0),
-							MaxRank:      int(skillMap["maxrank"].(float64)),
-							Names:        make(map[string]string),
-							Tooltips:     make(map[string]string),
-							Descriptions: make(map[string]string),
-						}
-
-						if value, ok := skillMap["cooldown"].([]interface{}); ok {
-							for _, v := range value {
-								skill.Cooldown = append(skill.Cooldown, int(v.(float64)))
-							}
-						}
-
-						if value, ok := skillMap["cost"].([]interface{}); ok {
-							for _, v := range value {
-								skill.Cost = append(skill.Cost, int(v.(float64)))
-							}
-						}
-
-						if value, ok := skillMap["range"].([]interface{}); ok {
-							for _, v := range value {
-								skill.Range = append(skill.Range, int(v.(float64)))
-							}
-						}
-
-						skill.Names[language] = skillMap["name"].(string)
-						skill.Tooltips[language] = skillMap["tooltip"].(string)
-						skill.Descriptions[language] = skillMap["description"].(string)
-
-						champion.Skills = append(champion.Skills, &skill)
+					skill := &Skill{
+						Id:           spell.Id,
+						Cooldown:     spell.Cooldown,
+						Cost:         spell.Cost,
+						Range:        spell.Range,
+						Maxrank:      spell.Maxrank,
+						Names:        make(map[string]string),
+						Descriptions: make(map[string]string),
+						Tooltips:     make(map[string]string),
 					}
+
+					skill.Names[language] = spell.Name
+					skill.Descriptions[language] = spell.Description
+					skill.Tooltips[language] = spell.Tooltip
+
+					champion.Skills = append(champion.Skills, skill)
 				}
 
-				if value, ok := championMap["passive"].(map[string]interface{}); ok {
-					champion.Passive.Name[language] = value["name"].(string)
-					champion.Passive.Description[language] = value["description"].(string)
+				champion.Info = Info{
+					Attack:     dirtyChampion.Info.Attack,
+					Defense:    dirtyChampion.Info.Defense,
+					Magic:      dirtyChampion.Info.Magic,
+					Difficulty: dirtyChampion.Info.Difficulty,
 				}
 
-				for _, tag := range championMap["tags"].([]interface{}) {
-					champion.Tags = append(champion.Tags, tag.(string))
+				champion.Stats = Stats{
+					Hp:                   dirtyChampion.Stats.Hp,
+					Hpperlevel:           dirtyChampion.Stats.Hpperlevel,
+					Mp:                   dirtyChampion.Stats.Mp,
+					Mpperlevel:           dirtyChampion.Stats.Mpperlevel,
+					Movespeed:            dirtyChampion.Stats.Movespeed,
+					Armor:                dirtyChampion.Stats.Armor,
+					Armorperlevel:        dirtyChampion.Stats.Armorperlevel,
+					Spellblock:           dirtyChampion.Stats.Spellblock,
+					Spellblockperlevel:   dirtyChampion.Stats.Spellblockperlevel,
+					Attackrange:          dirtyChampion.Stats.Attackrange,
+					Hpregen:              dirtyChampion.Stats.Hpregen,
+					Hpregenperlevel:      dirtyChampion.Stats.Hpregenperlevel,
+					Mpregen:              dirtyChampion.Stats.Mpregen,
+					Mpregenperlevel:      dirtyChampion.Stats.Mpregenperlevel,
+					Crit:                 dirtyChampion.Stats.Crit,
+					Critperlevel:         dirtyChampion.Stats.Critperlevel,
+					Attackdamage:         dirtyChampion.Stats.Attackdamage,
+					Attackdamageperlevel: dirtyChampion.Stats.Attackdamageperlevel,
+					Attackspeedperlevel:  dirtyChampion.Stats.Attackspeedperlevel,
+					Attackspeed:          dirtyChampion.Stats.Attackspeed,
 				}
 
-				champions[index] = champion
+				champion.Titles[language] = dirtyChampion.Title
+				champion.Blurbs[language] = dirtyChampion.Blurb
+				champion.Lores[language] = dirtyChampion.Lore
+				champion.Passive.Name[language] = dirtyChampion.Passive.Name
+				champion.Passive.Description[language] = dirtyChampion.Passive.Description
 
+				champions[dirtyChampion.Id] = champion
 			}
+
 		}
+
 	}
 	return champions, nil
 
+}
+
+func (c *Champion) ToLanguage(language string) *Champion {
+	return &Champion{
+		Id:     c.Id,
+		Key:    c.Key,
+		Name:   c.Name,
+		Tags:   c.Tags,
+		Titles: map[string]string{language: c.Titles[language]},
+		Blurbs: map[string]string{language: c.Blurbs[language]},
+		Lores:  map[string]string{language: c.Lores[language]},
+		Passive: &Passive{
+			Name:        map[string]string{language: c.Passive.Name[language]},
+			Description: map[string]string{language: c.Passive.Description[language]},
+		},
+		Info:  c.Info,
+		Stats: c.Stats,
+		Skills: func() []*Skill {
+			skills := make([]*Skill, 0)
+			for _, skill := range c.Skills {
+				skills = append(skills, skill.ToLanguage(language))
+			}
+			return skills
+		}(),
+	}
+}
+
+func (s *Skill) ToLanguage(language string) *Skill {
+	return &Skill{
+		Id:           s.Id,
+		Cooldown:     s.Cooldown,
+		Cost:         s.Cost,
+		Range:        s.Range,
+		Maxrank:      s.Maxrank,
+		Names:        map[string]string{language: s.Names[language]},
+		Descriptions: map[string]string{language: s.Descriptions[language]},
+		Tooltips:     map[string]string{language: s.Tooltips[language]},
+	}
 }
 
 type Champion struct {
@@ -235,11 +247,11 @@ type Stats struct {
 }
 
 type Skill struct {
-	Id       string `json:"id"`
-	Cooldown []int  `json:"cooldown"`
-	Cost     []int  `json:"cost"`
-	Range    []int  `json:"range"`
-	MaxRank  int    `json:"maxrank"`
+	Id       string    `json:"id"`
+	Cooldown []float64 `json:"cooldown"`
+	Cost     []float64 `json:"cost"`
+	Range    []float64 `json:"range"`
+	Maxrank  int       `json:"maxrank"`
 
 	// Moze trzeba dodać effect nie wiem, po co jest ale w sumie nie ma tego w riot dragonie
 

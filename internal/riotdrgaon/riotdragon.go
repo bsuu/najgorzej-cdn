@@ -272,6 +272,37 @@ type Version struct {
 	Runes     map[string]*RuneReforged `json:"runes"`
 }
 
+func (v *Version) ToLanguage(language string) *Version {
+	items := make(map[string]*Item, 0)
+	champions := make(map[string]*Champion, 0)
+	summoners := make(map[string]*Summoner, 0)
+	runes := make(map[string]*RuneReforged, 0)
+
+	for id, item := range v.Items {
+		items[id] = item.ToLanguage(language)
+	}
+
+	for id, champion := range v.Champions {
+		champions[id] = champion.ToLanguage(language)
+	}
+
+	for id, summoner := range v.Summoners {
+		summoners[id] = summoner.ToLanguage(language)
+	}
+
+	for id, rune := range v.Runes {
+		runes[id] = rune.ToLanguage(language)
+	}
+
+	return &Version{
+		Id:        v.Id,
+		Items:     items,
+		Champions: champions,
+		Summoners: summoners,
+		Runes:     runes,
+	}
+}
+
 func (v *Version) GetItem(ids ...string) map[string]*Item {
 	items := make(map[string]*Item, 0)
 	for _, id := range ids {
@@ -290,4 +321,24 @@ func (v *Version) GetChampion(ids ...string) map[string]*Champion {
 		}
 	}
 	return champions
+}
+
+func (v *Version) GetSummoner(ids ...string) map[string]*Summoner {
+	summoners := make(map[string]*Summoner, 0)
+	for _, id := range ids {
+		if summoner, ok := v.Summoners[id]; ok {
+			summoners[id] = summoner
+		}
+	}
+	return summoners
+}
+
+func (v *Version) GetRune(ids ...string) map[string]*RuneReforged {
+	runes := make(map[string]*RuneReforged, 0)
+	for _, id := range ids {
+		if rune, ok := v.Runes[id]; ok {
+			runes[id] = rune
+		}
+	}
+	return runes
 }

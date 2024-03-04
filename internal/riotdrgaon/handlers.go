@@ -1,6 +1,7 @@
 package riotdrgaon
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -57,6 +58,44 @@ func (r *RiotDragon) GetItemHandler(c *fiber.Ctx) error {
 	return c.JSON(item)
 }
 
+func (r *RiotDragon) GetSummonersHandler(c *fiber.Ctx) error {
+	v := c.Locals("version").(*Version)
+	return c.JSON(v.Summoners)
+}
+
+func (r *RiotDragon) GetSummonerHandler(c *fiber.Ctx) error {
+	summonerId := c.Params("summoner")
+	summonersIds := strings.Split(summonerId, ",")
+	v := c.Locals("version").(*Version)
+	summoner := v.GetSummoner(summonersIds...)
+	if len(summoner) == 0 {
+		return c.SendStatus(404)
+	}
+	if len(summoner) == 1 {
+		return c.JSON(summoner[summonersIds[0]])
+	}
+	return c.JSON(summoner)
+}
+
+func (r *RiotDragon) GetRunesHandler(c *fiber.Ctx) error {
+	v := c.Locals("version").(*Version)
+	return c.JSON(v.Runes)
+}
+
+func (r *RiotDragon) GetRuneHandler(c *fiber.Ctx) error {
+	runeId := c.Params("rune")
+	runesIds := strings.Split(runeId, ",")
+	v := c.Locals("version").(*Version)
+	rune := v.GetRune(runesIds...)
+	if len(rune) == 0 {
+		return c.SendStatus(404)
+	}
+	if len(rune) == 1 {
+		return c.JSON(rune[runesIds[0]])
+	}
+	return c.JSON(rune)
+}
+
 func (r *RiotDragon) CacheHandler(c *fiber.Ctx) error {
 	versionId := c.Params("version")
 	v, err := r.GetVersion(versionId)
@@ -69,7 +108,23 @@ func (r *RiotDragon) CacheHandler(c *fiber.Ctx) error {
 		r.Versions = append(r.Versions, version)
 		return c.Next()
 	}
+	lang := c.Locals("language")
+	if lang != nil {
+		v = v.ToLanguage(lang.(string))
+	}
 
 	c.Locals("version", v)
+	return c.Next()
+}
+
+func (r *RiotDragon) LanguageHandler(c *fiber.Ctx) error {
+	language := c.Query("lang")
+	if language == "" {
+		return c.Next()
+	}
+	index := sort.SearchStrings(r.Languages, language)
+	if index < len(r.Languages) {
+		c.Locals("language", language)
+	}
 	return c.Next()
 }

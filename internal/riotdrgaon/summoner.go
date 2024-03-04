@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+
+	riot_model "bsuu.eu/riot-cdn/internal/riotdrgaon/model"
 )
 
 func (R *RiotDragon) GetSummonersFromRiot(version string) (map[string]*Summoner, error) {
@@ -26,7 +28,7 @@ func (R *RiotDragon) GetSummonersFromRiot(version string) (map[string]*Summoner,
 			return nil, err
 		}
 
-		var payload map[string]interface{}
+		var payload riot_model.RiotSummoner
 
 		err = json.Unmarshal(body, &payload)
 
@@ -34,68 +36,51 @@ func (R *RiotDragon) GetSummonersFromRiot(version string) (map[string]*Summoner,
 			continue
 		}
 
-		for index, dirtySummoner := range payload["data"].(map[string]interface{}) {
-			summonerMap := dirtySummoner.(map[string]interface{})
-
-			if value, ok := summoners[index]; ok {
-				value.Names[language] = summonerMap["name"].(string)
-				value.Description[language] = summonerMap["description"].(string)
-				value.Tooltip[language] = summonerMap["tooltip"].(string)
-
+		for key, summoner := range payload.Data {
+			if summ, ok := summoners[key]; ok {
+				summ.Names[language] = summoner.Name
+				summ.Description[language] = summoner.Description
+				summ.Tooltip[language] = summoner.Tooltip
 			} else {
-				summoner := &Summoner{
-					Id:          summonerMap["id"].(string),
-					Effect:      nil,
-					Vars:        make([]string, 0),
-					Key:         summonerMap["key"].(string),
-					Names:       make(map[string]string),
-					Description: make(map[string]string),
-					Tooltip:     make(map[string]string),
+
+				summoners[key] = &Summoner{
+					Id:            summoner.Id,
+					MaxRank:       summoner.Maxrank,
+					Cost:          int(summoner.Cost[0]),
+					Cooldown:      int(summoner.Cooldown[0]),
+					Effect:        summoner.EffectBurn,
+					Vars:          summoner.EffectBurn,
+					Key:           summoner.Key,
+					SummonerLevel: summoner.Summonerlevel,
+					Names:         make(map[string]string, 0),
+					Description:   make(map[string]string, 0),
+					Tooltip:       make(map[string]string, 0),
 				}
 
-				if value, ok := summonerMap["effectBurn"].([]interface{}); ok {
-					for _, effect := range value {
-						if effect == nil {
-							summoner.Effect = append(summoner.Effect, "")
-						} else {
-							summoner.Effect = append(summoner.Effect, effect.(string))
-						}
-					}
-				}
-
-				if value, ok := summonerMap["vars"].([]interface{}); ok {
-					for _, vars := range value {
-						varsMap := vars.(map[string]interface{})
-						summoner.Vars = append(summoner.Vars, varsMap["key"].(string))
-					}
-				}
-
-				if value, ok := summonerMap["cost"].([]interface{}); ok {
-					summoner.Cost = int(value[0].(float64))
-				}
-
-				if value, ok := summonerMap["maxrank"].(float64); ok {
-					summoner.MaxRank = int(value)
-				}
-
-				if value, ok := summonerMap["cooldown"].([]interface{}); ok {
-					summoner.Cooldown = int(value[0].(float64))
-				}
-
-				if value, ok := summonerMap["summonerLevel"].(float64); ok {
-					summoner.SummonerLevel = int(value)
-				}
-
-				summoner.Names[language] = summonerMap["name"].(string)
-				summoner.Description[language] = summonerMap["description"].(string)
-				summoner.Tooltip[language] = summonerMap["tooltip"].(string)
-
-				summoners[index] = summoner
+				summoners[key].Names[language] = summoner.Name
+				summoners[key].Description[language] = summoner.Description
+				summoners[key].Tooltip[language] = summoner.Tooltip
 			}
 		}
 	}
 
 	return summoners, nil
+}
+
+func (s *Summoner) ToLanguage(language string) *Summoner {
+	return &Summoner{
+		Id:            s.Id,
+		MaxRank:       s.MaxRank,
+		Cost:          s.Cost,
+		Cooldown:      s.Cooldown,
+		Effect:        s.Effect,
+		Vars:          s.Vars,
+		Key:           s.Key,
+		SummonerLevel: s.SummonerLevel,
+		Names:         map[string]string{language: s.Names[language]},
+		Description:   map[string]string{language: s.Description[language]},
+		Tooltip:       map[string]string{language: s.Tooltip[language]},
+	}
 }
 
 type Summoner struct {

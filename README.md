@@ -1,1 +1,0 @@
-# najgorzej-cdn

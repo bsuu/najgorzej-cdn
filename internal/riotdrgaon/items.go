@@ -3,8 +3,11 @@ package riotdrgaon
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+
+	riot_model "bsuu.eu/riot-cdn/internal/riotdrgaon/model"
 )
 
 func (r *RiotDragon) GetItem(versionId string, id string) (*Item, error) {
@@ -49,109 +52,64 @@ func (r *RiotDragon) GetItemsFromRiot(version string) (map[string]*Item, error) 
 			return nil, err
 		}
 
-		var payload map[string]interface{}
+		var payload riot_model.RiotItem
 
 		err = json.Unmarshal(body, &payload)
 
 		if err != nil {
+			fmt.Println(err)
 			continue
 		}
 
-		for index, dirtyItem := range payload["data"].(map[string]interface{}) {
-			itemMap := dirtyItem.(map[string]interface{})
-
-			if item, ok := items[index]; ok {
-				if value, ok := itemMap["name"].(string); ok {
-					item.Names[language] = value
-				}
-
-				if value, ok := itemMap["description"].(string); ok {
-					item.Descriptions[language] = value
-				}
-
-				if value, ok := itemMap["plaintext"].(string); ok {
-					item.Plaintext[language] = value
-				}
-
+		for key, item := range payload.Data {
+			if it, ok := items[key]; ok {
+				it.Names[language] = item.Name
+				it.Descriptions[language] = item.Description
+				it.Plaintext[language] = item.Plaintext
 			} else {
-				// Not existing
-				item := &Item{
-					Id:           index,
-					Stats:        make(map[string]int),
-					Names:        make(map[string]string),
-					Descriptions: make(map[string]string),
-					Plaintext:    make(map[string]string),
-
-					Into: make([]string, 0),
-					From: make([]string, 0),
-					Tags: make([]string, 0),
+				items[key] = &Item{
+					Id:   key,
+					Into: item.Into,
+					From: item.From,
+					Gold: Gold{
+						Base:        item.Gold.Base,
+						Total:       item.Gold.Total,
+						Sell:        item.Gold.Sell,
+						Purchasable: item.Gold.Purchasable,
+					},
+					Tags:         item.Tags,
+					Stats:        item.Stats,
+					Descriptions: make(map[string]string, 0),
+					Names:        make(map[string]string, 0),
+					Plaintext:    make(map[string]string, 0),
+					Depth:        item.Depth,
 				}
 
-				if value, ok := itemMap["stats"].(map[string]interface{}); ok {
-					for k, v := range value {
-						if stat, ok := v.(float64); ok {
-							item.Stats[k] = int(stat)
-						}
-					}
-				}
-
-				if value, ok := itemMap["into"].([]interface{}); ok {
-					for _, v := range value {
-						if v == nil {
-							continue
-						}
-						item.Into = append(item.Into, v.(string))
-					}
-				}
-
-				if value, ok := itemMap["from"].([]interface{}); ok {
-					for _, v := range value {
-						if v == nil {
-							continue
-						}
-						item.From = append(item.From, v.(string))
-					}
-				}
-
-				if value, ok := itemMap["tags"].([]interface{}); ok {
-					for _, v := range value {
-						if v == nil {
-							continue
-						}
-						item.Tags = append(item.Tags, v.(string))
-					}
-				}
-
-				if value, ok := itemMap["depth"]; ok {
-					item.Depth = int(value.(float64))
-				}
-
-				item.Gold = Gold{
-					Base:        int(itemMap["gold"].(map[string]interface{})["base"].(float64)),
-					Total:       int(itemMap["gold"].(map[string]interface{})["total"].(float64)),
-					Sell:        int(itemMap["gold"].(map[string]interface{})["sell"].(float64)),
-					Purchasable: itemMap["gold"].(map[string]interface{})["purchasable"].(bool),
-				}
-
-				if value, ok := itemMap["name"].(string); ok {
-					item.Names[language] = value
-				}
-
-				if value, ok := itemMap["description"].(string); ok {
-					item.Descriptions[language] = value
-				}
-
-				if value, ok := itemMap["plaintext"].(string); ok {
-					item.Plaintext[language] = value
-				}
-
-				items[index] = item
+				items[key].Names[language] = item.Name
+				items[key].Descriptions[language] = item.Description
+				items[key].Plaintext[language] = item.Plaintext
 			}
 
 		}
+
 	}
 
 	return items, nil
+}
+
+func (i *Item) ToLanguage(language string) *Item {
+	return &Item{
+		Id:           i.Id,
+		Into:         i.Into,
+		From:         i.From,
+		Gold:         i.Gold,
+		Tags:         i.Tags,
+		Stats:        i.Stats,
+		Descriptions: map[string]string{language: i.Descriptions[language]},
+		Names:        map[string]string{language: i.Names[language]},
+		Plaintext:    map[string]string{language: i.Plaintext[language]},
+		Depth:        i.Depth,
+	}
 }
 
 type Item struct {
@@ -160,15 +118,15 @@ type Item struct {
 	Into []string `json:"into"` // jak coś to w co item jest budowany
 	From []string `json:"from"` // jak coś to z czego item jest budowany
 
-	Gold  Gold           `json:"gold"`  // ile golda kosztuje item
-	Tags  []string       `json:"tags"`  // jakie tagi ma item
-	Stats map[string]int `json:"stats"` // jakie staty daje item
+	Gold  Gold               `json:"gold"`  // ile golda kosztuje item
+	Tags  []string           `json:"tags"`  // jakie tagi ma item
+	Stats map[string]float64 `json:"stats"` // jakie staty daje item
 
 	Descriptions map[string]string `json:"descriptions"`
 	Names        map[string]string `json:"names"`
 	Plaintext    map[string]string `json:"plaintext"`
 
-	Depth int `json:"depth"` // ile itemów jest potrzebnych do zbudowania tego itemu
+	Depth float64 `json:"depth"` // ile itemów jest potrzebnych do zbudowania tego itemu
 }
 
 type Gold struct {
