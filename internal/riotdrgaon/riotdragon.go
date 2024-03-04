@@ -240,8 +240,9 @@ func NewRiotDragon(config *RiotDragonConfig) *RiotDragon {
 	riotDragon.Languages = languages
 
 	if _, err := os.Stat(config.Path); os.IsNotExist(err) {
-		err := os.Mkdir(config.Path, 0755)
+		err := os.MkdirAll(config.Path, 0755)
 		if err != nil {
+			fmt.Println("Error creating directory")
 			fmt.Println(err)
 		}
 	}

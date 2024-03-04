@@ -18,7 +18,7 @@ import (
 func main() {
 
 	download := flag.Bool("download", true, "Download the data from the Riot API")
-	path := flag.String("path", "data/", "Path to the data")
+	path := flag.String("path", "/tmp/cdn/data/", "Path to the data")
 	cacheSize := flag.Int("cache", 50, "Cache size")
 
 	flag.Parse()
@@ -85,7 +85,7 @@ func main() {
 
 	// Static files
 
-	cdn.Static("/images", "./images")
+	cdn.Static("/tmp/cdn/images/", "./images")
 
 	app.Listen(":8080")
 }
