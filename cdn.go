@@ -12,14 +12,15 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/favicon"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/pprof"
 	"github.com/gofiber/fiber/v2/utils"
 )
 
 func main() {
-
 	download := flag.Bool("download", true, "Download the data from the Riot API")
 	path := flag.String("path", "/tmp/cdn/data/", "Path to the data")
 	cacheSize := flag.Int("cache", 50, "Cache size")
+	port := flag.String("port", "3002", "Port to listen on")
 
 	flag.Parse()
 
@@ -38,6 +39,10 @@ func main() {
 	}
 
 	app := fiber.New()
+
+	// pprof
+
+	app.Use(pprof.New())
 
 	//Middlewares
 
@@ -87,5 +92,5 @@ func main() {
 
 	cdn.Static("/tmp/cdn/images/", "./images")
 
-	app.Listen(":8080")
+	app.Listen(":" + *port)
 }
