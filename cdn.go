@@ -90,7 +90,7 @@ func main() {
 
 	// Static files
 
-	cdn.Static("/tmp/cdn/images/", "./images")
+	cdn.Static("/images", "/tmp/cdn/images/")
 
 	app.Listen(":" + *port)
 }
