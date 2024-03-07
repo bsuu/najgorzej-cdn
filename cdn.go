@@ -17,9 +17,9 @@ import (
 )
 
 func main() {
-	download := flag.Bool("download", false, "Download the data from the Riot API")
+	download := flag.Bool("download", true, "Download the data from the Riot API")
 	path := flag.String("path", "/tmp/cdn/data/", "Path to the data")
-	cacheSize := flag.Int("cache", 50, "Cache size")
+	cacheSize := flag.Int("cache", 15, "Cache size")
 	port := flag.String("port", "3002", "Port to listen on")
 
 	flag.Parse()
