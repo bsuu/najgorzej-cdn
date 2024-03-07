@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	download := flag.Bool("download", true, "Download the data from the Riot API")
+	download := flag.Bool("download", false, "Download the data from the Riot API")
 	path := flag.String("path", "/tmp/cdn/data/", "Path to the data")
 	cacheSize := flag.Int("cache", 50, "Cache size")
 	port := flag.String("port", "3002", "Port to listen on")
@@ -83,6 +83,16 @@ func main() {
 
 	cdn.Get("/runes/:version", riotDragon.LanguageHandler, riotDragon.CacheHandler, riotDragon.GetRunesHandler)
 	cdn.Get("/runes/:version/:rune", riotDragon.LanguageHandler, riotDragon.CacheHandler, riotDragon.GetRuneHandler)
+
+	// Routes Static
+
+	static := cdn.Group("/static")
+
+	static.Get("/seasons", riotDragon.StaticSesonsHandler)
+	static.Get("/queues", riotDragon.StaticQueueHandler)
+	static.Get("/maps", riotDragon.StaticMapHandler)
+	static.Get("/gameModes", riotDragon.StaticGameModeHandler)
+	static.Get("/gameTypes", riotDragon.StaticGameTypeHandler)
 
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendStatus(418)

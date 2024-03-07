@@ -8,6 +8,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+
+	riot_model "bsuu.eu/riot-cdn/internal/riotdrgaon/model"
 )
 
 func (r *RiotDragon) DownloadVersion(version string) (*Version, error) {
@@ -45,6 +47,43 @@ func (r *RiotDragon) DownloadVersion(version string) (*Version, error) {
 	r.SaveLocalVersions(v)
 	fmt.Printf("\r[%s] Status: Download complete            \n", version)
 	return v, nil
+}
+
+func (r *RiotDragon) DownloadStatic() error {
+	seasons, err := GetSeasonsFromRiot()
+	if err != nil {
+		return err
+	}
+
+	queues, err := GetQueuesFromRiot()
+	if err != nil {
+		return err
+	}
+
+	maps, err := GetMapsFromRiot()
+	if err != nil {
+		return err
+	}
+
+	gameModes, err := GetGameModesFromRiot()
+	if err != nil {
+		return err
+	}
+
+	gameTypes, err := GetGameTypesFromRiot()
+	if err != nil {
+		return err
+	}
+
+	r.Static = &Static{
+		Seasons:   seasons,
+		Queues:    queues,
+		Maps:      maps,
+		GameModes: gameModes,
+		GameTypes: gameTypes,
+	}
+
+	return nil
 }
 
 func fileExists(path string) bool {
@@ -239,6 +278,12 @@ func NewRiotDragon(config *RiotDragonConfig) *RiotDragon {
 
 	riotDragon.Languages = languages
 
+	err = riotDragon.DownloadStatic()
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	if _, err := os.Stat(config.Path); os.IsNotExist(err) {
 		err := os.MkdirAll(config.Path, 0755)
 		if err != nil {
@@ -262,7 +307,17 @@ type RiotDragon struct {
 
 	Versions []*Version `json:"gameVersions"`
 
+	Static *Static `json:"static"`
+
 	Config *RiotDragonConfig `json:"config"`
+}
+
+type Static struct {
+	Seasons   map[int]*riot_model.Season      `json:"seasons"`
+	Queues    map[int]*riot_model.Queue       `json:"queues"`
+	Maps      map[int]*riot_model.Map         `json:"maps"`
+	GameModes map[string]*riot_model.GameMode `json:"gameModes"`
+	GameTypes map[string]*riot_model.GameType `json:"gameTypes"`
 }
 
 type Version struct {

@@ -128,3 +128,23 @@ func (r *RiotDragon) LanguageHandler(c *fiber.Ctx) error {
 	}
 	return c.Next()
 }
+
+func (r *RiotDragon) StaticSesonsHandler(c *fiber.Ctx) error {
+	return c.JSON(r.Static.Seasons)
+}
+
+func (r *RiotDragon) StaticQueueHandler(c *fiber.Ctx) error {
+	return c.JSON(r.Static.Queues)
+}
+
+func (r *RiotDragon) StaticGameTypeHandler(c *fiber.Ctx) error {
+	return c.JSON(r.Static.GameTypes)
+}
+
+func (r *RiotDragon) StaticGameModeHandler(c *fiber.Ctx) error {
+	return c.JSON(r.Static.GameModes)
+}
+
+func (r *RiotDragon) StaticMapHandler(c *fiber.Ctx) error {
+	return c.JSON(r.Static.Maps)
+}
